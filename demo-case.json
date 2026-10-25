@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "0.1",
+  "source": "fictional_demo",
+  "deviceId": "DEMO-ONLY",
+  "meter": {
+    "manufacturer": "DEMO-ONLY",
+    "model": "DEMO-ONLY",
+    "registerMapVersion": "none"
+  },
+  "capturedAt": null,
+  "clockValid": false,
+  "measurementValid": false,
+  "registerMapVerified": false,
+  "measurements": [],
+  "notes": "Fictional placeholder. Contains no live electrical measurements."
+}
