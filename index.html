@@ -1,13 +1,96 @@
 <!doctype html>
 <html lang="de">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="0; url=app/">
-<title>ElektroPilot AI / BoxScan B</title>
-<script>location.replace('app/');</script>
-</head>
-<body>
-<p>Weiter zur <a href="app/">ElektroPilot AI / BoxScan B Web-App</a>.</p>
-</body>
-</html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101820">
+<title>ElektroPilot — BoxScan B</title>
+<style>
+:root{color-scheme:dark;--bg:#101820;--panel:#1b2732;--line:#344553;--text:#f3f6f8;--muted:#b9c6cf;--accent:#79d7c1;--warn:#ffcc80}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,sans-serif}
+main{max-width:900px;margin:auto;padding:24px}header{margin-bottom:20px}.tag{color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.78rem}
+h1{font-size:clamp(2rem,6vw,3rem);line-height:1.08;margin:.3em 0}p{color:var(--muted)}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin:16px 0}
+label{display:block;font-weight:650;margin:12px 0 5px}input,select,textarea{width:100%;padding:12px;border-radius:9px;border:1px solid var(--line);background:#101820;color:var(--text);font:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}button{background:var(--accent);color:#10211f;border:0;border-radius:10px;padding:12px 16px;font-weight:750;font:inherit;cursor:pointer;margin-top:14px}
+.notice{border-left:4px solid var(--warn);padding:10px 14px;background:#30291e;border-radius:6px;color:#ffe4ba}
+#result{white-space:pre-wrap}.muted{font-size:.9rem;color:var(--muted)}.src{font-size:.85rem;color:var(--muted);margin-top:10px}footer{padding:18px 0;color:var(--muted);font-size:.85rem}
+</style></head>
+<body><main>
+<header><div class="tag">Eigenständiger Prototyp · BoxScan B</div><h1>ElektroPilot</h1><p>Hilfe bei der Fehlersuche für Elektrofachkräfte. Belege zählen.</p></header>
+<div class="notice"><strong>Nur Prototyp.</strong> Die Demo-Werte sind erfunden. Die App misst keine Stromkreise. Sie stellt keine sichere Diagnose. Sie gibt keine Freigabe. Nutze sie nie als einzige Grundlage für Arbeiten an der Anlage.</div>
+<section class="panel"><h2>Auftrag</h2>
+<label for="symptom">Beobachtetes Symptom</label><textarea id="symptom" rows="3" placeholder="Beschreibe, was du gesehen hast, wann es passiert und was du schon geprüft hast."></textarea>
+<div class="grid"><div><label for="device">Gerät / Stromkreis</label><input id="device" placeholder="z. B. Beschriftung, wenn geprüft"></div>
+<div><label for="rcd">Verhalten von FI / Schutzorgan</label><select id="rcd"><option value="unknown">Unbekannt / nicht geprüft</option><option value="trips">Löst zeitweise aus</option><option value="stable">Keine Auslösung beobachtet</option></select></div>
+<div><label for="quality">Qualität der Belege</label><select id="quality"><option value="low">Niedrig: nur mündlicher Bericht / unvollständig</option><option value="medium">Mittel: Beobachtungen notiert</option><option value="high">Hoch: geprüfter Messwert vom Gerät</option></select></div></div>
+<details style="margin-top:14px"><summary>Server (optional)</summary>
+<label for="api">API-Adresse</label><input id="api" value="http://localhost:3000" autocomplete="off">
+<label for="token">API-Token (nur wenn der Server eines verlangt)</label><input id="token" type="password" autocomplete="off">
+<p class="muted">Leer lassen = nur lokale Checkliste. Erlaubt sind nur https und localhost. Der Token wird nicht gespeichert.</p></details>
+<button id="analyze">Vorläufige Checkliste erstellen</button>
+</section>
+<section class="panel"><h2>Vorläufiges Ergebnis</h2><div id="result" aria-live="polite">Gib deine Beobachtungen ein. Tippe dann auf „Vorläufige Checkliste erstellen“.</div><div class="src" id="src"></div></section>
+<footer>Eigenständiger Prototyp. Diese Seite sammelt keine Messwerte. Beachte die geltenden Vorschriften und die Herstellerangaben.</footer>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const Q={low:"NIEDRIG",medium:"MITTEL",high:"HOCH",unknown:"UNBEKANNT"};
+function localLines(symptom,rcd,quality){
+ const out=["STATUS: Nur eine vorläufige Checkliste. Keine Diagnose und keine Freigabe.","Qualität der Belege: "+Q[quality]+"."];
+ if(!symptom) out.push("• Notiere das genaue Symptom, die Bedingungen, die Zeit und ob es sich wiederholt.");
+ if(rcd==="trips"){
+  out.push("• Eine Auslösung kann mehrere Ursachen haben. Nimm nicht nur eine Ursache an.");
+  out.push("• Eine Elektrofachkraft folgt dem anerkannten Prüfverfahren mit geeigneten, geprüften Messgeräten.");
+  out.push("• Notiere Lasten, Zeiten, wie sicher die Zuordnung des Stromkreises ist, und die Messergebnisse.");
+ }else if(rcd==="stable"){
+  out.push("• Keine Auslösung heißt nicht: Die Anlage ist sicher.");
+  out.push("• Vergleiche die Angaben mit den Prüfprotokollen und dem gültigen Prüfverfahren.");
+ }else{
+  out.push("• Das Verhalten des Schutzorgans ist unbekannt. Sammle zuerst geprüfte Beobachtungen.");
+ }
+ out.push("• Prüfe die Beschriftung der Stromkreise. Nimm nicht an, dass sie stimmt.");
+ out.push("• Trenne im Auftrag: Messwerte, Berichte, Annahmen und fehlende Belege.");
+ out.push("• Bei akuter Gefahr: Bereich sichern und Arbeit stoppen. Beachte die Regeln der Baustelle.");
+ return out;
+}
+function apiLines(d){
+ const out=["STATUS: Nur eine vorläufige Checkliste. Keine Diagnose und keine Freigabe.","Qualität der Belege: "+(Q[d.evidenceQuality]||Q.unknown)+"."];
+ (d.checklist||[]).forEach(x=>out.push("• "+x));
+ if((d.missingEvidence||[]).length){out.push("Fehlende Belege:");d.missingEvidence.forEach(x=>out.push("– "+x));}
+ if(d.warning) out.push("Achtung: "+d.warning);
+ return out;
+}
+function apiBase(){
+ const raw=$("api").value.trim();
+ if(!raw) return null;
+ let u; try{u=new URL(raw)}catch(e){throw new Error("Die API-Adresse ist ungültig.")}
+ const local=u.hostname==="localhost"||u.hostname==="127.0.0.1";
+ if(u.protocol!=="https:"&&!(u.protocol==="http:"&&local)) throw new Error("Nur https oder localhost ist erlaubt.");
+ return u.origin;
+}
+async function viaApi(base,payload){
+ const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),4000);
+ try{
+  const h={"content-type":"application/json"},tok=$("token").value.trim();
+  if(tok) h.authorization="Bearer "+tok;
+  const r=await fetch(base+"/api/analyze",{method:"POST",headers:h,body:JSON.stringify(payload),signal:ctl.signal});
+  if(!r.ok) throw new Error("Der Server antwortete mit Fehler "+r.status+".");
+  return await r.json();
+ }finally{clearTimeout(t)}
+}
+$("analyze").addEventListener("click",async()=>{
+ const symptom=$("symptom").value.trim(),rcd=$("rcd").value,quality=$("quality").value;
+ let lines,src="Quelle: lokale Checkliste (ohne Server).";
+ try{
+  const base=apiBase();
+  if(base){
+   const d=await viaApi(base,{symptom,rcd,quality,observations:$("device").value.trim()?["Gerät / Stromkreis: "+$("device").value.trim()]:[]});
+   lines=apiLines(d);src="Quelle: Server "+base+".";
+  }
+ }catch(e){
+  src="Quelle: lokale Checkliste. Server nicht genutzt: "+(e.name==="AbortError"?"keine Antwort in 4 Sekunden.":e.name==="TypeError"?"Der Server ist nicht erreichbar.":e.message);
+ }
+ if(!lines) lines=localLines(symptom,rcd,quality);
+ $("result").textContent=lines.join("\n");
+ $("src").textContent=src;
+});
+</script></body></html>
