@@ -1,0 +1,16 @@
+name: Validate
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: cd server && npm test
+      - name: Validate demo JSON
+        run: node -e "JSON.parse(require('fs').readFileSync('data/demo-case.json','utf8'))"
